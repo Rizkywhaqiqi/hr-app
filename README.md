@@ -141,3 +141,46 @@ Aplikasi siap didemokan di `http://127.0.0.1:8000` (login: **admin@jojo.test** /
 8. (Opsional) Tunjukkan pengelolaan data master Brand/Divisi/Lokasi/Jabatan dan tampilan responsif (tablet/HP, tombol ☰).
 
 > Catatan: file screenshot dan rekaman demo penggunaan disiapkan dari aplikasi yang berjalan di atas sesuai checklist ini.
+
+## Deploy ke Railway (online)
+
+Konfigurasi deploy ada di `railway.json` (pre-deploy `migrate --force --seed`, healthcheck `/up`, restart policy `ON_FAILURE`).
+
+**Langkah:**
+
+1. Railway → **New Project → Deploy from GitHub repo** → pilih repo `hr-app`.
+2. **+ New → Database → MySQL** (satu project dengan service aplikasi).
+3. Buka service aplikasi → **Variables → Raw Editor**, tempel:
+
+```
+APP_NAME="HR App"
+APP_ENV=production
+APP_DEBUG=false
+APP_KEY=base64:...        # hasil: php artisan key:generate --show
+APP_URL=https://domain-railway-kamu
+APP_LOCALE=id
+
+LOG_CHANNEL=stderr
+LOG_STDERR_FORMATTER=\Monolog\Formatter\JsonFormatter
+
+DB_CONNECTION=mysql
+DB_URL=${{MySQL.MYSQL_URL}}
+
+SESSION_DRIVER=database
+CACHE_STORE=database
+QUEUE_CONNECTION=database
+
+RAILPACK_PHP_EXTENSIONS=pdo_mysql,mbstring,dom,gd,zip
+RAILPACK_SKIP_MIGRATIONS=true
+```
+
+4. **Settings → Networking → Generate Domain**, lalu samakan `APP_URL` dengan domain tersebut dan redeploy.
+5. Setelah deploy sukses, login dengan akun seeder: **admin@jojo.test** / **password**.
+
+**Catatan Railway:**
+
+- `railway.json` menjalankan `php artisan migrate --force --seed` sebelum container start, jadi tabel + data dummy dibuat otomatis.
+- `DatabaseSeeder` hanya mengisi tabel yang masih kosong, jadi **redeploy tidak menggandakan data**.
+- `RAILPACK_SKIP_MIGRATIONS=true` mencegah migrasi jalan dua kali (Railpack/FrankenPHP menjalankan migrasi otomatis saat start).
+- Filesystem Railway bersifat sementara → log dikirim ke stdout lewat `LOG_CHANNEL=stderr`.
+- Alternatif tanpa GitHub: `railway login` → `railway init` → `railway up` (butuh Railway CLI terpasang).
