@@ -182,4 +182,6 @@ RAILPACK_SKIP_MIGRATIONS=true
 - `DatabaseSeeder` hanya mengisi tabel yang masih kosong, jadi **redeploy tidak menggandakan data**.
 - `RAILPACK_SKIP_MIGRATIONS=true` mencegah migrasi jalan dua kali (Railpack/FrankenPHP menjalankan migrasi otomatis saat start).
 - Filesystem Railway bersifat sementara → log dikirim ke stdout lewat `LOG_CHANNEL=stderr`.
+- `bootstrap/app.php` memakai `trustProxies(at: '*')` supaya skema HTTPS & host terbaca benar di belakang reverse proxy Railway.
+- Panel **Suggested Variables** itu saran otomatis dari `.env.example`; variabel yang tidak dipakai (`APP_FAKER_LOCALE`, `BCRYPT_ROUNDS`, `LOG_LEVEL`, `APP_MAINTENANCE_DRIVER`, ...) boleh dihapus.
 - Alternatif tanpa GitHub: `railway login` → `railway init` → `railway up` (butuh Railway CLI terpasang).
