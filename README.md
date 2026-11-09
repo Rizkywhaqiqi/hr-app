@@ -1,58 +1,143 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Aplikasi HR Internal (Practical Test IT Support)
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Aplikasi web untuk mengelola data karyawan beberapa brand F&B.
+Dibuat dengan **Laravel 13**, data disimpan di **MySQL**. Semua data adalah **dummy** (nama & brand fiktif).
 
-## About Laravel
+## Fitur (sesuai brief)
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+| Brief | Lokasi di aplikasi |
+|---|---|
+| Dashboard interaktif: total, aktif/nonaktif, per brand/divisi/lokasi (kartu & grafik bisa diklik) | menu **Dashboard** |
+| Tambah, lihat daftar/detail, ubah, ganti status aktif/nonaktif | menu **Karyawan** |
+| Cari nama/ID, filter brand/divisi/lokasi/status | form di atas tabel **Karyawan** |
+| Rekap per brand, daftar aktif/nonaktif, ekspor CSV & PDF | menu **Laporan** |
+| Validasi (ID unik, wajib diisi, format, pesan error) | form tambah/ubah karyawan |
+| **Kelola data master** brand / divisi / lokasi / jabatan (tambah, ubah, hapus) | menu **Brand**, **Divisi**, **Lokasi**, **Jabatan** |
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+Karyawan **tidak dihapus permanen**; yang dipakai adalah status **Nonaktif** supaya riwayat tetap ada.
+Data master yang **masih dipakai karyawan tidak bisa dihapus** (dilindungi dengan pesan), untuk mencegah data yatim.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Login
 
-## Learning Laravel
+Aplikasi ini **dilindungi login** (semua halaman wajib masuk). Akun demo dibuat oleh seeder:
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+- **Email:** `admin@jojo.test`
+- **Password:** `password`
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+Setelah login, **nama user** dan tombol **Logout** tampil di bilah atas. Logout mengakhiri sesi dan kembali ke halaman login.
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+## Teknologi
 
-## Agentic Development
+- PHP 8.3 dan **Laravel 13 (MVC)**
+- Eloquent ORM + migration + seeder
+- Blade (server-side rendering, CSS inline — tanpa npm/Vite)
+- **barryvdh/laravel-dompdf** untuk ekspor laporan ke PDF
+- **MySQL** (database)
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+## Struktur aplikasi
 
-```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+```
+app/Models/Employee.php                       model karyawan + relasi brand/divisi/lokasi/jabatan + scope filter
+app/Models/{Brand,Division,Location,Position}.php   data master (hasMany Employee)
+app/Http/Requests/EmployeeRequest.php         validasi karyawan (Bahasa Indonesia)
+app/Http/Requests/{Brand,Division,Location,Position}Request.php   validasi data master
+app/Http/Controllers/DashboardController.php  angka dashboard
+app/Http/Controllers/EmployeeController.php   tambah, daftar, detail, ubah, ganti status
+app/Http/Controllers/{Brand,Division,Location,Position}Controller.php   CRUD data master
+app/Http/Controllers/ReportController.php     laporan + ekspor CSV & PDF
+app/Providers/AppServiceProvider.php          paksa HTTPS production + pagination kustom
+database/migrations/2026_01_01_00000{0,1,2,3}_create_{brands,divisions,locations,positions}_table.php
+database/migrations/2026_01_01_000004_create_employees_table.php  tabel karyawan + FK
+database/seeders/DatabaseSeeder.php           data master + 33 karyawan dummy
+routes/web.php                                daftar URL
+resources/views/                              layout, dashboard, karyawan, laporan, master
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+## Cara kerja penyimpanan data
 
-## Contributing
+1. Data master (brand, divisi, lokasi, jabatan) disimpan di tabel tersendiri. Karyawan menyimpan **ID** (`brand_id`, `division_id`, `location_id`, `position_id`) dengan **foreign key**, bukan teks biasa.
+2. Karena memakai relasi, **mengubah nama brand/divisi/lokasi langsung mengubah tampilan** di semua karyawan & laporan.
+3. Saat form karyawan disimpan, `EmployeeRequest` memvalidasi dulu, lalu Eloquent menjalankan `INSERT`/`UPDATE`.
+4. Data ada di MySQL sehingga tetap ada setelah reload/restart. Dashboard & laporan menghitung ulang dengan `COUNT` + relasi tiap dibuka.
+5. ID karyawan unik dijaga dua lapis: aturan `unique` di validasi + `UNIQUE INDEX` di database.
+6. Menghapus brand/divisi/lokasi yang **masih dipakai** karyawan ditolak aplikasi (dicek jumlah karyawan) plus FK `restrict`.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## Instalasi lokal (Laragon / MySQL)
 
-## Code of Conduct
+Prasyarat: PHP 8.3+, Composer, ekstensi `pdo_mysql`, `mbstring`, `openssl`, `zip`; MySQL berjalan.
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```bash
+cd c:\laragon\www\hr-app
+composer install
+copy .env.example .env          # lalu isi koneksi MySQL
+```
 
-## Security Vulnerabilities
+`.env`:
+```
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=hr_app
+DB_USERNAME=root
+DB_PASSWORD=
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Buat database lalu jalankan:
+```bash
+mysql -uroot -e "CREATE DATABASE IF NOT EXISTS hr_app CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+php artisan key:generate
+php artisan migrate --seed
+php artisan serve
+```
 
-## License
+Buka **http://127.0.0.1:8000**.
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+> Reset data: `php artisan migrate:fresh --seed` → 3 brand (jojo juice, jly, guulak), 8 divisi, 5 lokasi (alamat di Pontianak & Singkawang, Kalbar), 13 jabatan, 33 karyawan dummy.
+
+## Petunjuk penggunaan
+
+> Semua halaman wajib login. Masuk dengan **admin@jojo.test** / **password** (lihat bagian **Login**).
+
+1. **Dashboard interaktif**: kartu Total/Aktif/Nonaktif/Brand dapat diklik untuk membuka daftar terfilter; grafik donut status + batang per brand/divisi/lokasi juga bisa diklik. Menu samping responsif (tombol ☰ di tablet & HP).
+2. **Tambah karyawan**: Karyawan → Tambah Karyawan → pilih brand/divisi/lokasi/jabatan → Simpan.
+3. **Ubah / ganti status**: tombol **Ubah** / **Nonaktifkan / Aktifkan**. Saat dinonaktifkan, waktu nonaktif otomatis tercatat dan tampil di halaman **Lihat** (baris **Dinonaktifkan Pada**).
+4. **Cari & filter**: ketik nama/ID, pilih brand/divisi/lokasi/status, klik **Terapkan**.
+5. **Data master**: buka menu **Master Data** (dropdown) → **Brand / Divisi / Lokasi / Jabatan** untuk menambah, mengubah, menghapus. Item yang dipakai karyawan tidak bisa dihapus.
+6. **Laporan**: rekap per brand + daftar. Tombol **Ekspor CSV / Excel** (BOM UTF-8, siap Excel) dan **Ekspor PDF** (header **JOJO GROUP MANAGEMENT**, rincian **detail per karyawan** seperti halaman Lihat) mengikuti filter aktif.
+
+## Aturan validasi
+
+- **ID karyawan**: wajib, unik, format `KS-001` (2-5 huruf besar + hubung + 3-6 angka). Huruf kecil otomatis jadi besar.
+- **Nama lengkap**: wajib, 3-100 karakter, hanya huruf (dengan aksen), spasi, titik, apostrof, hubung.
+- **Brand / divisi / lokasi / jabatan / status**: wajib, harus mengacu ke data master yang tersedia.
+- **Jabatan**: wajib dipilih dari data master jabatan (dikelola di menu Jabatan).
+- **Tanggal bergabung**: wajib, format `YYYY-MM-DD`, tidak boleh di masa depan.
+- **Nama brand / divisi / lokasi / jabatan**: wajib, maks 100 karakter, tidak boleh duplikat.
+
+## Demo & Checklist Screenshot (untuk pengumpulan)
+
+Aplikasi siap didemokan di `http://127.0.0.1:8000` (login: **admin@jojo.test** / **password**). Berikut daftar screenshot fitur utama dan alur demo ±5 menit. Sertakan juga screenshot **halaman Login**.
+
+**Checklist screenshot fitur utama:**
+1. **Dashboard HR** — kartu total/aktif/nonaktif/brand, donut status, grafik batang per brand/divisi/lokasi.
+2. **Daftar Karyawan** — tabel + form pencarian & filter.
+3. **Hasil pencarian** (mis. ketik `KS-001`) dan **hasil filter** (brand/divisi/status).
+4. **Form Tambah Karyawan** (dropdown brand/divisi/lokasi/jabatan).
+5. **Error validasi** — coba ID duplikat (mis. `KS-001`) dan kolom kosong; tampilkan pesan error.
+6. **Detail Karyawan**.
+7. **Ubah data** & **ganti status** (Aktif/Nonaktif).
+8. **Laporan** — rekap per brand, ringkasan aktif/nonaktif, daftar karyawan.
+9. **File ekspor** — CSV (dibuka di Excel) dan PDF (header **JOJO GROUP MANAGEMENT**).
+10. **Data master** — layar Brand / Divisi / Lokasi / Jabatan (tambah/ubah/hapus).
+
+**Alur demo (±5 menit):**
+1. Login (admin@jojo.test / password), lalu buka Dashboard → tunjukkan angka awal (total, aktif, nonaktif, per brand/divisi/lokasi).
+2. Tambah karyawan baru (pilih jabatan dari dropdown) → lihat dashboard & laporan ikut bertambah.
+3. Coba tambah dengan ID yang sama + kolom kosong → tunjukkan pesan error validasi.
+4. Nonaktifkan seorang karyawan → angka aktif/nonaktif berubah di dashboard.
+5. Cari (nama/ID) dan filter (brand/divisi/status).
+6. Buka Laporan → ekspor **CSV** dan **PDF** → buka filenya.
+7. Refresh browser / restart `php artisan serve` → tunjukkan data tetap tersimpan.
+8. (Opsional) Tunjukkan pengelolaan data master Brand/Divisi/Lokasi/Jabatan dan tampilan responsif (tablet/HP, tombol ☰).
+
+> Catatan: file screenshot dan rekaman demo penggunaan disiapkan dari aplikasi yang berjalan di atas sesuai checklist ini.
