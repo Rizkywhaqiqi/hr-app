@@ -158,7 +158,6 @@ APP_ENV=production
 APP_DEBUG=false
 APP_KEY=base64:...        # hasil: php artisan key:generate --show
 APP_URL=https://domain-railway-kamu
-APP_LOCALE=id
 
 LOG_CHANNEL=stderr
 LOG_STDERR_FORMATTER=\Monolog\Formatter\JsonFormatter
